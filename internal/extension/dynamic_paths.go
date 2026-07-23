@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/bluenviron/mediamtx/internal/conf"
+	"github.com/bluenviron/mediamtx/internal/conf/yamlwrapper"
 	"github.com/goccy/go-yaml"
 )
 
@@ -46,7 +47,7 @@ func LoadPaths(c *conf.Conf, fpath string) {
 	}
 
 	var d DynamicPathsConfig
-	err = yaml.Unmarshal(byts, &d)
+	err = yamlwrapper.Unmarshal(byts, &d)
 	if err != nil {
 		return
 	}
