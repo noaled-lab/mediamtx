@@ -1,0 +1,51 @@
+name: release-ghcr
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to publish (e.g. 1.19.2-api-paths-persistence). Leave empty to derive it from the git tag."
+        required: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  binaries:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - run: make binaries
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: binaries
+          path: binaries
+
+  ghcr:
+    needs: binaries
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: binaries
+          path: binaries
+
+      - run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            make ghcr VERSION="${{ inputs.version }}"
+          else
+            make ghcr
+          fi
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
