@@ -70,16 +70,20 @@ func SavePaths(c *conf.Conf, fpath string) error {
 	}
 
 	// mediamtx.yml에 있는 기본 path들은 제외하고 순수하게 동적으로 추가된 것만 추려냅니다.
-	dynamicOnly := make(map[string]*conf.OptionalPath)
+	dynamicOnly := make(map[string]any)
 	for k, v := range c.OptionalPaths {
 		if !staticPathKeys[k] {
-			dynamicOnly[k] = v
+			// v (*conf.OptionalPath) 대신 v.Values를 저장하여 불필요한 "values:" 래퍼를 제거합니다.
+			dynamicOnly[k] = v.Values
 		}
 	}
 
-	d := &DynamicPathsConfig{
+	d := struct {
+		Paths map[string]any `yaml:"paths"`
+	}{
 		Paths: dynamicOnly,
 	}
+	
 	byts, err := yaml.Marshal(d)
 	if err != nil {
 		return err
