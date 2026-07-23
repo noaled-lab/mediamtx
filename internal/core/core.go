@@ -23,6 +23,7 @@ import (
 	"github.com/bluenviron/mediamtx/internal/auth"
 	"github.com/bluenviron/mediamtx/internal/conf"
 	"github.com/bluenviron/mediamtx/internal/confwatcher"
+	"github.com/bluenviron/mediamtx/internal/extension"
 	"github.com/bluenviron/mediamtx/internal/externalcmd"
 	"github.com/bluenviron/mediamtx/internal/logger"
 	"github.com/bluenviron/mediamtx/internal/metrics"
@@ -214,6 +215,12 @@ func New(args []string) (*Core, bool) {
 		return nil, false
 	}
 
+	extension.LoadPaths(p.conf, p.confPath)
+	if err := p.conf.Validate(tempLogger); err != nil {
+		fmt.Printf("ERR: %s\n", err)
+		return nil, false
+	}
+
 	err = p.createResources(true)
 	if err != nil {
 		if p.logger != nil {
@@ -270,6 +277,12 @@ outer:
 
 			newConf, _, err := conf.Load(p.confPath, nil, p.logger)
 			if err != nil {
+				p.Log(logger.Error, "%s", err)
+				break outer
+			}
+
+			extension.LoadPaths(newConf, p.confPath)
+			if err := newConf.Validate(p.logger); err != nil {
 				p.Log(logger.Error, "%s", err)
 				break outer
 			}
@@ -1148,6 +1161,12 @@ func (p *Core) reloadConf(newConf *conf.Conf, calledByAPI bool) error {
 	p.closeResources(newConf, calledByAPI)
 
 	p.conf = newConf
+
+	if calledByAPI {
+		if err := extension.SavePaths(newConf, p.confPath); err != nil {
+			p.Log(logger.Error, "failed to save dynamic paths: %v", err)
+		}
+	}
 
 	err := p.createResources(false)
 	if err != nil {
